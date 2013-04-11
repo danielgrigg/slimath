@@ -1,13 +1,12 @@
 # slimath
 
-A Clojure library designed to ... well, that part is up to you.
+A simple Clojure math library.  Mostly linear algebra.
 
 ## Usage
 
-FIXME
 
 ## License
 
-Copyright © 2013 FIXME
+Copyright © 2013 Daniel Grigg
 
 Distributed under the Eclipse Public License, the same as Clojure.
