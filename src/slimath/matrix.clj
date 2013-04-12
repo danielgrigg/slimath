@@ -1,84 +1,86 @@
 (in-ns 'slimath.core)
 
-(defmacro make-matrix-ops [op-name desc]
+(defmacro -make-matrix-ops [op-name desc]
   (cons `do
         (for [n [2 3 4]]
           `(defn ~(str-sym- "ms" op-name n)
              ~(str desc " two " n "-matrices")
              [~'A ~'B]
-             [~@(for [r (range n)] `(~(str-sym- \v op-name n) (~'A ~r) (~'B ~r)))]))))
+             [~@(for [r (range n)] `(~(str-sym- \v n op-name) (~'A ~r) (~'B ~r)))]))))
 
-(defmacro make-matrix-scalar-ops [op-name desc]
+(defmacro -make-matrix-scalar-ops [op-name desc]
   (cons `do
         (for [n [2 3 4]]
-          `(defn ~(str-sym- "m" op-name n "s")
+          `(defn ~(str-sym- "m" n op-name "s")
              ~(str desc " matrix with scalar")
              [~'A ~'k]
-             [~@(for [r (range n)] `(~(str-sym- \v op-name n "s") (~'A ~r) ~'k))]))))
+             [~@(for [r (range n)] `(~(str-sym- \v n op-name "s") (~'A ~r) ~'k))]))))
 
 
-(defmacro make-mmul []
+(defmacro -make-mmul []
   (cons 'do
         (for [n [2 3 4]]
-          (let [mmul# (str-sym- "mmul" n)]
+          (let [mmul# (str-sym- "m" n "mul")]
             `(defn ~mmul#  ~(str "Multiply two " n "x" n " matrices")
                ([~'A ~'B]
                 (let [~@(apply concat
                                `(~@(for [c (range n)]
                                      `[~(str-sym- "c" c)
-                                       (~(str-sym- "mcol" n) ~'B ~c) ])))]
+                                       (~(str-sym- "m" n "col") ~'B ~c) ])))]
                   [~@(for [x (range n)]
                        (vec (for [y (range n)]
-                              `(~(str-sym- "vdot" n) (~'A ~x) ~(str-sym- "c" y)))))]))
+                              `(~(str-sym- "v" n "dot") (~'A ~x) ~(str-sym- "c" y)))))]))
                ([~'A ~'B & ~'xs]
                 (reduce ~mmul# (~mmul# ~'A ~'B) ~'xs)))))))
 
-(make-matrix-ops add "Add")
-(make-matrix-ops sub "Subtract")
-(make-matrix-ops mul "Multiply")
-(make-matrix-ops div "Divide")
-(make-matrix-scalar-ops add "Add")
-(make-matrix-scalar-ops sub "Subtract")
-(make-matrix-scalar-ops mul "Multiply")
-(make-matrix-scalar-ops div "Divide")
+(-make-matrix-ops add "Add")
+(-make-matrix-ops sub "Subtract")
+(-make-matrix-ops mul "Multiply")
+(-make-matrix-ops div "Divide")
+(-make-matrix-scalar-ops add "Add")
+(-make-matrix-scalar-ops sub "Subtract")
+(-make-matrix-scalar-ops mul "Multiply")
+(-make-matrix-scalar-ops div "Divide")
 
-(defn mrow [M r] (M r))
-(defn mcol2 [M c] [((M 0) c) ((M 1) c)])
-(defn mcol3 [M c] [((M 0) c) ((M 1) c) ((M 2) c)])
-(defn mcol4 [M c] [((M 0) c) ((M 1) c) ((M 2) c) ((M 3) c)])
+(defn m2row [M r] (M r))
+(defn m3row [M r] (M r))
+(defn m4row [M r] (M r))
+(defn m2col [M c] [((M 0) c) ((M 1) c)])
+(defn m3col [M c] [((M 0) c) ((M 1) c) ((M 2) c)])
+(defn m4col [M c] [((M 0) c) ((M 1) c) ((M 2) c) ((M 3) c)])
 
-(make-mmul)
+(-make-mmul)
 
-(defn mtranspose3 "2x2 transpose"
-  [A] [(mcol2 A 0) (mcol2 A 1)])
-(defn mtranspose3 "3x3 transpose"
-  [A] [(mcol3 A 0) (mcol3 A 1) (mcol3 A 2)])
-(defn mtranspose4 "4x4 transpose"
-  [A] [(mcol4 A 0) (mcol4 A 1) (mcol4 A 2) (mcol4 A 3)])
+(defn m2transpose "2x2 transpose"
+  [A] [(m2col A 0) (m2col A 1)])
+(defn m3transpose "3x3 transpose"
+  [A] [(m3col A 0) (m3col A 1) (m3col A 2)])
+(defn m4transpose "4x4 transpose"
+  [A] [(m4col A 0) (m4col A 1) (m4col A 2) (m4col A 3)])
 
-(defmacro make-matrix-lookups []
+(defmacro -make-matrix-lookups []
   (cons 'do
         (for [r (range 4) c (range 4)]
           `(defn ~(str-sym- "m" r c)
              [~'A]
              ((~'A ~r) ~c)))))
 
-(make-matrix-lookups)
+(-make-matrix-lookups)
 
-(defn mdet2 "2x2 matrix determinant" [A]
+(defn m2det "2x2 matrix determinant" [A]
   (- (* (m00 A) (m11 A)) (* (m01 A) (m10 A))))
 
-(defn mdet3 "3x3 matrix determinant" [M]
-  (vdot3 (mrow M 0)
+(defn m3det "3x3 matrix determinant" [M]
+  (v3dot (m3row M 0)
          [(- (* (m11 M) (m22 M)) (* (m12 M) (m21 M)))
           (- (* (m12 M) (m20 M)) (* (m22 M) (m10 M)))
           (- (* (m10 M) (m21 M)) (* (m11 M) (m20 M)))]))
 
-(defn minverse2 [A]
-  (mmul2s [[(m11 A) (-(m01 A))] [(-(m10 A)) (m00 A)]]
-          (/ (double (mdet2 A)))))
+(defn m2inverse [A]
+  (m2muls [[(m11 A) (-(m01 A))] [(-(m10 A)) (m00 A)]]
+          (/ (double (m2det A)))))
 
-(defn minverse3 [M]
+(defn m3inverse [M]
   "3x3 matrix inverse"
   (let [A (- (* (m11 M) (m22 M)) (* (m12 M) (m21 M))) 
         B (- (* (m12 M) (m20 M)) (* (m10 M) (m22 M)))
@@ -89,11 +91,11 @@
         G (- (* (m01 M) (m12 M)) (* (m02 M) (m11 M)))
         H (- (* (m02 M) (m10 M)) (* (m00 M) (m12 M)))                                                  
         K (- (* (m00 M) (m11 M)) (* (m01 M) (m10 M)))]
-    (mmul3s [[A D G]
+    (m3muls [[A D G]
              [B E H]
-             [C F K]] (/ (double (mdet3 M))))))
+             [C F K]] (/ (double (m3det M))))))
 
-(defn minverse4 [M]
+(defn m4inverse [M]
   (let [t [(* (m22 M) (m33 M))           (* (m23 M) (m32 M))
            (* (m21 M) (m33 M))           (* (m23 M) (m31 M))
            (* (m21 M) (m32 M))           (* (m22 M) (m31 M))
@@ -144,23 +146,23 @@
                (+ (* (t 16) (m30 M)) (* (t 21) (m31 M)) (* (t 22) (m32 M))))
             (- (+ (* (t 22) (m22 M)) (* (t 16) (m20 M)) (* (t 21) (m21 M)))
                (+ (* (t 20) (m21 M)) (* (t 23) (m22 M)) (* (t 17) (m20 M))))]]]
-    (mmul4s B (/ (double (vdot4 (mrow M 0) (mcol4 B 0)))))))
+    (m4muls B (/ (double (v4dot (m4row M 0) (m4col B 0)))))))
 
-(defn midentity2 [] [[1 0] [0 1]])
-(defn midentity3 [] [[1 0 0] [0 1 0] [0 0 1]])
-(defn midentity4 [] [[1 0 0 0] [0 1 0 0] [0 0 1 0] [0 0 0 1]])
+(defn m2identity [] [[1 0] [0 1]])
+(defn m3identity [] [[1 0 0] [0 1 0] [0 0 1]])
+(defn m4identity [] [[1 0 0 0] [0 1 0 0] [0 0 1 0] [0 0 0 1]])
 
-(defmacro make-matrix-generator [f is-fn]
+(defmacro -make-matrix-generator [f is-fn]
   (cons `do
         (for [n [2 3 4]]
-          `(defn ~(str-sym- "m" f n)
+          `(defn ~(str-sym- "m" n f)
              ~(str "Generate " n "x" n " matrix with entries generated by f")
              []
              [~@(for [r (range n)]
                   `[~@(for [c (range n)] (if is-fn `(~f) f) )])]))))
 
-(make-matrix-generator rand true)
+(-make-matrix-generator rand true)
 
-(defn mequal2 [A B] (every? true? (map vequal2 A B)))
-(defn mequal3 [A B] (every? true? (map vequal3 A B)))
-(defn mequal4 [A B] (every? true? (map vequal4 A B)))
+(defn m2equal [A B] (every? true? (map v2equal A B)))
+(defn m3equal [A B] (every? true? (map v3equal A B)))
+(defn m4equal [A B] (every? true? (map v4equal A B)))
