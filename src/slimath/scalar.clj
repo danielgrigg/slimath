@@ -1,6 +1,6 @@
 (in-ns 'slimath.core)
 
-(defn approx
+(defn approx?
   "Are x and y approximately equal"
   ([^double x ^double y]
    (< (numeric/abs (- x y)) eps))

@@ -1,168 +1,227 @@
 (in-ns 'slimath.core)
 
-(defmacro -make-matrix-ops [op-name desc]
-  (cons `do
-        (for [n [2 3 4]]
-          `(defn ~(str-sym- "ms" op-name n)
-             ~(str desc " two " n "-matrices")
-             [~'A ~'B]
-             [~@(for [r (range n)] `(~(str-sym- \v n op-name) (~'A ~r) (~'B ~r)))]))))
+(defmacro -make-matrix-ops
+  "A op B"
+ [{:keys [name op start end] :or {start 2}}]
+ (cons `do (for [n (range start end)]
+             `(defn ~(str-sym- \m n name)
+                ~name
+                [~'a ~'b]
+                (-vec-op ~op ~(* n n) ~'a ~'b)))))
 
-(defmacro -make-matrix-scalar-ops [op-name desc]
-  (cons `do
-        (for [n [2 3 4]]
-          `(defn ~(str-sym- "m" n op-name "s")
-             ~(str desc " matrix with scalar")
-             [~'A ~'k]
-             [~@(for [r (range n)] `(~(str-sym- \v n op-name "s") (~'A ~r) ~'k))]))))
+(defmacro -make-matrix-scalar-ops
+  "A op s"
+ [{:keys [name op start end] :or {start 2}}]
+ (cons `do (for [n (range start end)]
+             `(defn ~(str-sym- \m n name \s)
+                ~name
+                [~'a ~'s]
+                (-vec-scalar-op ~op ~(* n n) ~'a ~'s)))))
 
+(defmacro -make-matrix-column-lookups
+ [{:keys [start end] :or {start 2}}]
+ (cons `do (for [n (range start end)]
+             `(defn ~(str-sym- \m n "col")
+                "column lookup"
+                [~'A ~'c]
+                (~(str-sym- "vec" n) 
+                 ~@(for [r (range n)] `(~'A (+ (* ~'c ~n) ~r))))))))
 
-(defmacro -make-mmul []
+(defmacro -make-matrix-row-lookups
+ [{:keys [start end] :or {start 2}}]
+ (cons `do (for [n (range start end)]
+             `(defn ~(str-sym- \m n "row")
+                "row lookup"
+                [~'A ~'r]
+                (~(str-sym- "vec" n)
+                 ~@(for [c (range n)] `(~'A (+ (* ~c ~n) ~'r))))))))
+
+(defmacro -make-matrix-lookups 
+ [{:keys [start end] :or {start 2}}]
   (cons 'do
-        (for [n [2 3 4]]
-          (let [mmul# (str-sym- "m" n "mul")]
-            `(defn ~mmul#  ~(str "Multiply two " n "x" n " matrices")
-               ([~'A ~'B]
-                (let [~@(apply concat
-                               `(~@(for [c (range n)]
-                                     `[~(str-sym- "c" c)
-                                       (~(str-sym- "m" n "col") ~'B ~c) ])))]
-                  [~@(for [x (range n)]
-                       (vec (for [y (range n)]
-                              `(~(str-sym- "v" n "dot") (~'A ~x) ~(str-sym- "c" y)))))]))
-               ([~'A ~'B & ~'xs]
-                (reduce ~mmul# (~mmul# ~'A ~'B) ~'xs)))))))
+        (for [n (range start end)]
+          `(defn ~(str-sym- "m" n)
+             [~'A ~'r ~'c]
+             (~'A (+ (* ~'c ~n) ~'r))))))
 
-(-make-matrix-ops add "Add")
-(-make-matrix-ops sub "Subtract")
-(-make-matrix-ops mul "Multiply")
-(-make-matrix-ops div "Divide")
-(-make-matrix-scalar-ops add "Add")
-(-make-matrix-scalar-ops sub "Subtract")
-(-make-matrix-scalar-ops mul "Multiply")
-(-make-matrix-scalar-ops div "Divide")
+(defmacro -make-matrix-identities 
+ [{:keys [name op start end] :or {start 2}}]
+  (cons `do
+        (for [n (range start end)]
+          `(defn ~(str-sym- "m" n "identity")
+             ~(str n "x" n " identity matrix")
+             []
+             [~@(for [x (range n) y (range n)]
+                   (if (= x y) 1 0))]))))
 
-(defn m2row [M r] (M r))
-(defn m3row [M r] (M r))
-(defn m4row [M r] (M r))
-(defn m2col [M c] [((M 0) c) ((M 1) c)])
-(defn m3col [M c] [((M 0) c) ((M 1) c) ((M 2) c)])
-(defn m4col [M c] [((M 0) c) ((M 1) c) ((M 2) c) ((M 3) c)])
-
-(-make-mmul)
-
-(defn m2transpose "2x2 transpose"
-  [A] [(m2col A 0) (m2col A 1)])
-(defn m3transpose "3x3 transpose"
-  [A] [(m3col A 0) (m3col A 1) (m3col A 2)])
-(defn m4transpose "4x4 transpose"
-  [A] [(m4col A 0) (m4col A 1) (m4col A 2) (m4col A 3)])
-
-(defmacro -make-matrix-lookups []
-  (cons 'do
-        (for [r (range 4) c (range 4)]
-          `(defn ~(str-sym- "m" r c)
-             [~'A]
-             ((~'A ~r) ~c)))))
-
-(-make-matrix-lookups)
-
-(defn m2det "2x2 matrix determinant" [A]
-  (- (* (m00 A) (m11 A)) (* (m01 A) (m10 A))))
-
-(defn m3det "3x3 matrix determinant" [M]
-  (v3dot (m3row M 0)
-         [(- (* (m11 M) (m22 M)) (* (m12 M) (m21 M)))
-          (- (* (m12 M) (m20 M)) (* (m22 M) (m10 M)))
-          (- (* (m10 M) (m21 M)) (* (m11 M) (m20 M)))]))
-
-(defn m2inverse [A]
-  (m2muls [[(m11 A) (-(m01 A))] [(-(m10 A)) (m00 A)]]
-          (/ (double (m2det A)))))
-
-(defn m3inverse [M]
-  "3x3 matrix inverse"
-  (let [A (- (* (m11 M) (m22 M)) (* (m12 M) (m21 M))) 
-        B (- (* (m12 M) (m20 M)) (* (m10 M) (m22 M)))
-        C (- (* (m10 M) (m21 M)) (* (m11 M) (m20 M))) 
-        D (- (* (m02 M) (m21 M)) (* (m01 M) (m22 M))) 
-        E (- (* (m00 M) (m22 M)) (* (m02 M) (m20 M))) 
-        F (- (* (m20 M) (m01 M)) (* (m00 M) (m21 M))) 
-        G (- (* (m01 M) (m12 M)) (* (m02 M) (m11 M)))
-        H (- (* (m02 M) (m10 M)) (* (m00 M) (m12 M)))                                                  
-        K (- (* (m00 M) (m11 M)) (* (m01 M) (m10 M)))]
-    (m3muls [[A D G]
-             [B E H]
-             [C F K]] (/ (double (m3det M))))))
-
-(defn m4inverse [M]
-  (let [t [(* (m22 M) (m33 M))           (* (m23 M) (m32 M))
-           (* (m21 M) (m33 M))           (* (m23 M) (m31 M))
-           (* (m21 M) (m32 M))           (* (m22 M) (m31 M))
-           (* (m20 M) (m33 M))           (* (m23 M) (m30 M))
-           (* (m20 M) (m32 M))           (* (m22 M) (m30 M))
-           (* (m20 M) (m31 M))           (* (m21 M) (m30 M))
-           (* (m02 M) (m13 M))           (* (m03 M) (m12 M))
-           (* (m01 M) (m13 M))           (* (m03 M) (m11 M))
-           (* (m01 M) (m12 M))           (* (m02 M) (m11 M))
-           (* (m00 M) (m13 M))           (* (m03 M) (m10 M))
-           (* (m00 M) (m12 M))           (* (m02 M) (m10 M))
-           (* (m00 M) (m11 M))           (* (m01 M) (m10 M))]
-
-        B [[(- (+ (* (t 0) (m11 M)) (* (t 3) (m12 M)) (* (t 4) (m13 M)))
-               (+ (* (t 1) (m11 M)) (* (t 2) (m12 M)) (* (t 5) (m13 M))))         
-            (- (+ (* (t 1) (m01 M)) (* (t 2) (m02 M)) (* (t 5) (m03 M)))
-               (+ (* (t 0) (m01 M)) (* (t 3) (m02 M)) (* (t 4) (m03 M))))
-            (- (+ (* (t 12) (m31 M)) (* (t 15) (m32 M)) (* (t 16) (m33 M)))
-               (+ (* (t 13) (m31 M)) (* (t 14) (m32 M)) (* (t 17) (m33 M))))
-            (- (+ (* (t 14) (m22 M)) (* (t 17) (m23 M)) (* (t 13) (m21 M)))
-               (+ (* (t 16) (m23 M)) (* (t 12) (m21 M)) (* (t 15) (m22 M))))]
-
-           [(- (+ (* (t 1) (m10 M)) (* (t 6) (m12 M)) (* (t 9) (m13 M)))
-               (+ (* (t 0) (m10 M)) (* (t 7) (m12 M)) (* (t 8) (m13 M))))          
-            (- (+ (* (t 0) (m00 M)) (* (t 7) (m02 M)) (* (t 8) (m03 M)))
-               (+ (* (t 1) (m00 M)) (* (t 6) (m02 M)) (* (t 9) (m03 M))))          
-            (- (+ (* (t 13) (m30 M)) (* (t 18) (m32 M)) (* (t 21) (m33 M)))
-               (+ (* (t 12) (m30 M)) (* (t 19) (m32 M)) (* (t 20) (m33 M))))            
-            (- (+ (* (t 20) (m23 M)) (* (t 12) (m20 M)) (* (t 19) (m22 M)))
-               (+ (* (t 18) (m22 M)) (* (t 21) (m23 M)) (* (t 13) (m20 M))))]
-
-           [(- (+ (* (t 2) (m10 M)) (* (t 7) (m11 M)) (* (t 10) (m13 M)))
-               (+ (* (t 3) (m10 M)) (* (t 6) (m11 M)) (* (t 11) (m13 M))))          
-            (- (+ (* (t 3) (m00 M)) (* (t 6) (m01 M)) (* (t 11) (m03 M)))
-               (+ (* (t 2) (m00 M)) (* (t 7) (m01 M)) (* (t 10) (m03 M))))          
-            (- (+ (* (t 14) (m30 M)) (* (t 19) (m31 M)) (* (t 22) (m33 M)))
-               (+ (* (t 15) (m30 M)) (* (t 18) (m31 M)) (* (t 23) (m33 M))))            
-
-            (- (+ (* (t 18) (m21 M)) (* (t 23) (m23 M)) (* (t 15) (m20 M)))
-               (+ (* (t 22) (m23 M)) (* (t 14) (m20 M)) (* (t 19) (m21 M))))            
-            ]
-
-           [(- (+ (* (t 5) (m10 M)) (* (t 8) (m11 M)) (* (t 11) (m12 M)))
-               (+ (* (t 4) (m10 M)) (* (t 9) (m11 M)) (* (t 10) (m12 M))))
-            (- (+ (* (t 4) (m00 M)) (* (t 9) (m01 M)) (* (t 10) (m02 M)))
-               (+ (* (t 5) (m00 M)) (* (t 8) (m01 M)) (* (t 11)(m02 M))))
-            (- (+ (* (t 17) (m30 M)) (* (t 20) (m31 M)) (* (t 23) (m32 M)))
-               (+ (* (t 16) (m30 M)) (* (t 21) (m31 M)) (* (t 22) (m32 M))))
-            (- (+ (* (t 22) (m22 M)) (* (t 16) (m20 M)) (* (t 21) (m21 M)))
-               (+ (* (t 20) (m21 M)) (* (t 23) (m22 M)) (* (t 17) (m20 M))))]]]
-    (m4muls B (/ (double (v4dot (m4row M 0) (m4col B 0)))))))
-
-(defn m2identity [] [[1 0] [0 1]])
-(defn m3identity [] [[1 0 0] [0 1 0] [0 0 1]])
-(defn m4identity [] [[1 0 0 0] [0 1 0 0] [0 0 1 0] [0 0 0 1]])
-
+;; TODO - can't we use fn? here?
 (defmacro -make-matrix-generator [f is-fn]
   (cons `do
         (for [n [2 3 4]]
           `(defn ~(str-sym- "m" n f)
              ~(str "Generate " n "x" n " matrix with entries generated by f")
              []
-             [~@(for [r (range n)]
-                  `[~@(for [c (range n)] (if is-fn `(~f) f) )])]))))
+             [~@(for [x (range (* n n))] (if is-fn `(~f) f))]))))
 
+(defmacro -make-matrix-factories 
+"matrix factories take their args in row-major order"
+ [{:keys [start end] :or {start 2}}]
+  (cons `do
+        (for [n (range start end)]
+          (let [fname# (str-sym- "matrix" n)]
+          `(defn ~fname# ~(str "Create an " n "x" n " matrix")
+             [~@(for [r (range n) c (range n)] (str-sym- "m" r c))]
+             [ ~@(for [r (range n) c (range n)] 
+                                   (str-sym- "m" c r))])))))
+
+(defmacro -make-matrix-str
+ [{:keys [start end] :or {start 2}}]
+ (cons `do (for [n (range start end)]
+             (let [row# (str-sym- "m" n "row")]
+               `(defn ~(str-sym- \m n "str")
+                  "matrix to str"
+                [~'A]
+                (str ~@(interpose "\n" 
+                                  (for [r (range n)] 
+                                    `(pr-str (~row# ~'A ~r))))))))))
+
+(defmacro -make-mmul [{:keys [start end] :or {start 2}}]
+  (cons `do 
+         (for [n (range start end)]
+          (let [mmul# (str-sym- "m" n "mul")
+                dot# (str-sym- "v" n "dot")
+                row# (str-sym- "m" n "row")
+                col# (str-sym- "m" n "col")]
+            `(defn ~mmul#  ~(str "Multiply two " n "x" n " matrices")
+               ([~'A ~'B]
+                  (~(str-sym- "matrix" n) 
+                   ~@(for [y (range n) x (range n)]
+                       `(~dot# (~row# ~'A ~x) (~col# ~'B ~y)))))
+               ([~'A ~'B & ~'xs]
+                (reduce ~mmul# (~mmul# ~'A ~'B) ~'xs)))))))
+
+(defmacro -make-matrix-transpose [{:keys [start end] :or {start 2}}]
+  (cons `do (for [n (range start end)]
+              (let [fname# (str-sym- "m" n "transpose")
+                    factory# (str-sym- "matrix" n)]
+                `(defn ~fname# "transpose the matrix" [~'A]
+                   (~factory# ~@(for [y (range n) x (range n)]
+                               `(~'A ~(+ (* x n) y)))))))))
+
+(-make-matrix-factories {:end 5})
+(-make-matrix-identities {:end 5})
 (-make-matrix-generator rand true)
 
-(defn m2equal [A B] (every? true? (map v2equal A B)))
-(defn m3equal [A B] (every? true? (map v3equal A B)))
-(defn m4equal [A B] (every? true? (map v4equal A B)))
+(-make-matrix-lookups {:end 5})
+(-make-matrix-row-lookups {:end 5})
+(-make-matrix-column-lookups {:end 5})
+(-make-matrix-str {:end 5})
+(-make-matrix-ops {:name "add" :op + :end 5})
+(-make-matrix-ops {:name "sub" :op - :end 5})
+(-make-matrix-ops {:name "mul" :op * :end 5})
+(-make-matrix-ops {:name "div" :op / :end 5})
+(-make-matrix-ops {:name "gt" :op > :end 5})
+(-make-matrix-ops {:name "ge" :op >= :end 5})
+(-make-matrix-ops {:name "lt" :op < :end 5})
+(-make-matrix-ops {:name "le" :op <= :end 5})
+(-make-matrix-ops {:name "compare" :op compare :end 5})
+(-make-vec-reduce-ops { :prefix m :name "approx?" :rop and :mop approx? :end 5})
+
+(-make-matrix-scalar-ops {:name "add" :op + :end 5})
+(-make-matrix-scalar-ops {:name "sub" :op - :end 5})
+(-make-matrix-scalar-ops {:name "mul" :op * :end 5})
+(-make-matrix-scalar-ops {:name "div" :op / :end 5})
+
+(-make-matrix-transpose {:end 5})
+
+(-make-mmul {:end 5})
+
+(defn mint [M] (apply vector-of :int M))
+              
+(defn m2det "2x2 matrix determinant" [A]
+  (- (* (m2 A 0 0) (m2 A 1 1)) (* (m2 A 0 1) (m2 A 1 0))))
+
+;; FIXME
+(defn m3det "3x3 matrix determinant" [M]
+  (v3dot (m3row M 0)
+         (vec3 (- (* (m3 M 1 1) (m3 M 2 2)) (* (m3 M 1 2) (m3 M 2 1)))
+               (- (* (m3 M 1 2) (m3 M 2 0)) (* (m3 M 2 2) (m3 M 1 0)))
+               (- (* (m3 M 1 0) (m3 M 2 1)) (* (m3 M 1 1) (m3 M 2 0))))))
+
+;; TODO - Generalised determinant for sizes > 3
+
+(defn m2inverse [A]
+  (m2muls (matrix2 (A 3) (- (A 2)) (- (A 1)) (A 0)) (/ (double (m2det A)))))
+
+(defn m3inverse [M]
+  "3x3 matrix inverse"
+  (let [A (- (* (M 4) (M 8)) (* (M 7) (M 5))) 
+        B (- (* (M 7) (M 2)) (* (M 1) (M 8)))
+        C (- (* (M 1) (M 5)) (* (M 4) (M 2))) 
+        D (- (* (M 6) (M 5)) (* (M 3) (M 8))) 
+        E (- (* (M 0) (M 8)) (* (M 6) (M 2))) 
+        F (- (* (M 2) (M 3)) (* (M 0) (M 5))) 
+        G (- (* (M 3) (M 7)) (* (M 6) (M 4)))
+        H (- (* (M 6) (M 1)) (* (M 0) (M 7)))
+        K (- (* (M 0) (M 4)) (* (M 3) (M 1)))]
+    (m3muls (matrix3 A D G
+                     B E H
+                     C F K) 
+            (/ (double (m3det M))))))
+
+(defn m4inverse [M]
+  (let [t0 (* (M 10) (M 15)) t1 (* (M 14) (M 11))
+        t2   (* (M 6) (M 15)) t3  (* (M 14) (M 7))
+        t4   (* (M 6) (M 11)) t5 (* (M 10) (M 7))
+        t6   (* (M 2) (M 15)) t7 (* (M 14) (M 3))
+        t8   (* (M 2) (M 11)) t9 (* (M 10) (M 3))
+        t10   (* (M 2) (M 7)) t11  (* (M 6) (M 3))
+        t12   (* (M 8) (M 13)) t13  (* (M 12) (M 9))
+        t14   (* (M 4) (M 13)) t15 (* (M 12) (M 5))
+        t16   (* (M 4) (M 9))  t17 (* (M 8) (M 5))
+        t18   (* (M 0) (M 13)) t19 (* (M 12) (M 1))
+        t20   (* (M 0) (M 9))  t21 (* (M 8) (M 1))
+        t22   (* (M 0) (M 5))  t23 (* (M 4) (M 1))
+
+        B [ 
+            (- (+ (* t0 (M 5)) (* t3 (M 9)) (* t4 (M 13)))
+               (+ (* t1 (M 5)) (* t2 (M 9)) (* t5 (M 13))))         
+            (- (+ (* t1 (M 4)) (* t2 (M 8)) (* t5 (M 12)))
+               (+ (* t0 (M 4)) (* t3 (M 8)) (* t4 (M 12))))
+            (- (+ (* t12 (M 7)) (* t15 (M 11)) (* t16 (M 15)))
+               (+ (* t13 (M 7)) (* t14 (M 11)) (* t17 (M 15))))
+            (- (+ (* t14 (M 10)) (* t17 (M 14)) (* t13 (M 6)))
+               (+ (* t16 (M 14)) (* t12 (M 6)) (* t15 (M 10))))
+
+            (- (+ (* t1 (M 1)) (* t6 (M 9)) (* t9 (M 13)))
+               (+ (* t0 (M 1)) (* t7 (M 9)) (* t8 (M 13))))          
+            (- (+ (* t0 (M 0)) (* t7 (M 8)) (* t8 (M 12)))
+               (+ (* t1 (M 0)) (* t6 (M 8)) (* t9 (M 12))))          
+            (- (+ (* t13 (M 3)) (* t18 (M 11)) (* t21 (M 15)))
+               (+ (* t12 (M 3)) (* t19 (M 11)) (* t20 (M 15))))            
+            (- (+ (* t20 (M 14)) (* t12 (M 2)) (* t19 (M 10)))
+               (+ (* t18 (M 10)) (* t21 (M 14)) (* t13 (M 2))))
+
+            (- (+ (* t2 (M 1)) (* t7 (M 5)) (* t10 (M 13)))
+               (+ (* t3 (M 1)) (* t6 (M 5)) (* t11 (M 13))))          
+            (- (+ (* t3 (M 0)) (* t6 (M 4)) (* t11 (M 12)))
+               (+ (* t2 (M 0)) (* t7 (M 4)) (* t10 (M 12))))          
+            (- (+ (* t14 (M 3)) (* t19 (M 7)) (* t22 (M 15)))
+               (+ (* t15 (M 3)) (* t18 (M 7)) (* t23 (M 15))))
+            (- (+ (* t18 (M 6)) (* t23 (M 14)) (* t15 (M 2)))
+               (+ (* t22 (M 14)) (* t14 (M 2)) (* t19 (M 6))))
+
+            (- (+ (* t5 (M 1)) (* t8 (M 5)) (* t11 (M 9)))
+               (+ (* t4 (M 1)) (* t9 (M 5)) (* t10 (M 9))))
+            (- (+ (* t4 (M 0)) (* t9 (M 4)) (* t10 (M 8)))
+               (+ (* t5 (M 0)) (* t8 (M 4)) (* t11(M 8))))
+            (- (+ (* t17 (M 3)) (* t20 (M 7)) (* t23 (M 11)))
+               (+ (* t16 (M 3)) (* t21 (M 7)) (* t22 (M 11))))
+            (- (+ (* t22 (M 10)) (* t16 (M 2)) (* t21 (M 6)))
+               (+ (* t20 (M 6)) (* t23 (M 10)) (* t17 (M 2))))]]
+    (m4muls B (/ (double (v4dot(m4row M 0) (m4col B 0)))))))
+
+
+
+
+
