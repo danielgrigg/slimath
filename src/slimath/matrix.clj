@@ -54,7 +54,6 @@
              [~@(for [x (range n) y (range n)]
                    (if (= x y) 1 0))]))))
 
-;; TODO - can't we use fn? here?
 (defmacro -make-matrix-generator [f is-fn]
   (cons `do
         (for [n [2 3 4]]
@@ -64,8 +63,8 @@
              [~@(for [x (range (* n n))] (if is-fn `(~f) f))]))))
 
 (defmacro -make-matrix-factories 
-"matrix factories take their args in row-major order"
- [{:keys [start end] :or {start 2}}]
+  "matrix factories take their args in row-major order"
+  [{:keys [start end] :or {start 2}}]
   (cons `do
         (for [n (range start end)]
           (let [fname# (str-sym- "matrix" n)]
@@ -136,7 +135,7 @@
 
 (-make-mmul {:end 5})
 
-(defn mint [M] (apply vector-of :int M))
+(defn mint [M] (apply int M))
               
 (defn m2det "2x2 matrix determinant" [A]
   (- (* (m2 A 0 0) (m2 A 1 1)) (* (m2 A 0 1) (m2 A 1 0))))
@@ -220,8 +219,3 @@
             (- (+ (* t22 (M 10)) (* t16 (M 2)) (* t21 (M 6)))
                (+ (* t20 (M 6)) (* t23 (M 10)) (* t17 (M 2))))]]
     (m4muls B (/ (double (v4dot(m4row M 0) (m4col B 0)))))))
-
-
-
-
-

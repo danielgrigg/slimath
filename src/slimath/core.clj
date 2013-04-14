@@ -11,5 +11,5 @@
 (load "random")
 (load "vec")
 (load "matrix")
-;(load "matrix-vec-ops")
+(load "matrix-vec-ops")
 

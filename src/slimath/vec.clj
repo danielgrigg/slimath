@@ -1,23 +1,30 @@
 (in-ns 'slimath.core)
 
-(defmacro -vec-op "Evaluate a binary vector op"
-  [op n & args]  
-  `[~@(for [x (range n)] `(~op ~@(for [y args] `(~y ~x))))])
-
+;; TODO - would be nice if this worked
+(defmacro -varg [a n]
+  `(~@(for [x (range n)] (str-sym- a x)) :as ~a))  ; (str-sym- ~a ~x)) :as a))
+                
 (defmacro -make-vec-ops
  [{:keys [name op start end] :or {start 2}}]
  (cons `do (for [n (range start end)]
              `(defn ~(str-sym- \v n name)
                 ~name
-                [~'a ~'b]
-                (-vec-op ~op ~n ~'a ~'b)))))
+                 [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]
+                  [~@(for [x (range n)] (str-sym- "b" x)) :as ~'b]]
+                [~@(for [x (range n)] 
+                     `(~op ~(str-sym- "a" x) ~(str-sym- "b" x)))]))))
+
+;; TODO - ideally the general ops would be as fast as this.  But that requires
+;; type hinting.  Which seems to be a pita to get working on the above.
+(defn fast-add [[^double a1 ^double a2 ^double a3] [^double b1 ^double b2 ^double b3]]
+  [(+ a1 b1) (+ a2 b2) (+ a3 b3)])
 
 (defmacro -make-vec-unary-ops [{:keys [name op start end] :or {start 2}}]
   (cons `do (for [n (range start end)]
               `(defn ~(str-sym- \v n name)
                  ~name
-                 [~'a]
-                 (-vec-op ~op ~n ~'a)))))
+                [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]]
+                [~@(for [x (range n)] `(~op ~(str-sym- "a" x)))]))))
 
 (defmacro -vec-scalar-op [op n v scalar]
   `[ ~@(for [x (range n)]`(~op (~v ~x) ~scalar))])
@@ -27,8 +34,10 @@
   (cons `do (for [n (range start end)]
               `(defn ~(str-sym- \v n name "s")
                  ~name
-                 [~'a ^double ~'k]
-                 (-vec-scalar-op ~op ~n ~'a ~'k)))))
+                 [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a] ~'k]
+                 [ ~@(for [x (range n)] `(~op ~(str-sym- "a" x) ~'k))]))))
+;                 [~'a ^double ~'k]
+ ;                (-vec-scalar-op ~op ~n ~'a ~'k)))))
 
 (defmacro -vec-reduce [rop mop n & args]
   `(~rop ~@(for [x (range n)] `(~mop ~@(for [y args] `(~y ~x))))))
@@ -47,7 +56,8 @@
         (for [n (range start end)]
           (let [dot# (str-sym- "v" n "dot")
                 fname# (str-sym- "v" n "length")]
-            `(defn ~fname# "vector length" [~'a]
+            `(defn ~fname# "vector length" 
+               [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]]
                (numeric/sqrt (~dot# ~'a ~'a)))))))
 
 (defmacro -make-vec-generator 
@@ -100,3 +110,4 @@
   (vec3 (- (* (a 1) (b 2)) (* (a 2) (b 1)))
         (- (* (a 2) (b 0)) (* (a 0) (b 2)))
         (- (* (a 0) (b 1)) (* (a 1) (b 0)))))
+
