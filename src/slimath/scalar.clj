@@ -10,10 +10,9 @@
 
 (defn quadratic "Compute the quadratic equation" [^double A ^double B ^double C]
   (let [discrim (- (* B B) (* 4.0 A C))]
-    (if (< discrim 0)
-      nil
+    (when-not (neg? discrim)
       (let [rootDiscrim (numeric/sqrt discrim)
-            q (if (< B 0)
+            q (if (neg? B)
                 (* -0.5 (- B rootDiscrim))
                 (* -0.5 (+ B rootDiscrim)))
             t0 (/ q A)

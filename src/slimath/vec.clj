@@ -26,9 +26,6 @@
                 [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]]
                 [~@(for [x (range n)] `(~op ~(str-sym- "a" x)))]))))
 
-(defmacro -vec-scalar-op [op n v scalar]
-  `[ ~@(for [x (range n)]`(~op (~v ~x) ~scalar))])
-
 (defmacro -make-vec-scalar-ops  
 [{:keys [name op start end] :or {start 2}}]
   (cons `do (for [n (range start end)]
@@ -36,8 +33,6 @@
                  ~name
                  [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a] ~'k]
                  [ ~@(for [x (range n)] `(~op ~(str-sym- "a" x) ~'k))]))))
-;                 [~'a ^double ~'k]
- ;                (-vec-scalar-op ~op ~n ~'a ~'k)))))
 
 (defmacro -vec-reduce [rop mop n & args]
   `(~rop ~@(for [x (range n)] `(~mop ~@(for [y args] `(~y ~x))))))
@@ -110,4 +105,3 @@
   (vec3 (- (* (a 1) (b 2)) (* (a 2) (b 1)))
         (- (* (a 2) (b 0)) (* (a 0) (b 2)))
         (- (* (a 0) (b 1)) (* (a 1) (b 0)))))
-

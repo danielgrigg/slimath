@@ -7,7 +7,9 @@
              `(defn ~(str-sym- \m n name)
                 ~name
                 [~'a ~'b]
-                (-vec-op ~op ~(* n n) ~'a ~'b)))))
+                [~@(for [x (range (* n n))] 
+                     `(~op (~'a ~x) (~'b ~x)))]))))
+
 
 (defmacro -make-matrix-scalar-ops
   "A op s"
@@ -16,7 +18,7 @@
              `(defn ~(str-sym- \m n name \s)
                 ~name
                 [~'a ~'s]
-                (-vec-scalar-op ~op ~(* n n) ~'a ~'s)))))
+  [ ~@(for [x (range (* n n))]`(~op (~'a ~x) ~'s))]))))
 
 (defmacro -make-matrix-column-lookups
  [{:keys [start end] :or {start 2}}]
@@ -104,8 +106,8 @@
               (let [fname# (str-sym- "m" n "transpose")
                     factory# (str-sym- "matrix" n)]
                 `(defn ~fname# "transpose the matrix" [~'A]
-                   (~factory# ~@(for [y (range n) x (range n)]
-                               `(~'A ~(+ (* x n) y)))))))))
+                   [~@(for [y (range n) x (range n)]
+                               `(~'A ~(+ (* x n) y)))])))))
 
 (-make-matrix-factories {:end 5})
 (-make-matrix-identities {:end 5})
@@ -132,90 +134,102 @@
 (-make-matrix-scalar-ops {:name "div" :op / :end 5})
 
 (-make-matrix-transpose {:end 5})
+(-make-mmul {:end 4})
 
-(-make-mmul {:end 5})
+(defn m4mul [[ ^double a00 ^double a10 ^double a20 ^double a30
+                   ^double a01 ^double a11 ^double a21 ^double a31
+                   ^double a02 ^double a12 ^double a22 ^double a32
+                   ^double a03 ^double a13 ^double a23 ^double a33]
+                  [ ^double b00 ^double b10 ^double b20 ^double b30
+                   ^double b01 ^double b11 ^double b21 ^double b31
+                   ^double b02 ^double b12 ^double b22 ^double b32
+                   ^double b03 ^double b13 ^double b23 ^double b33]]
+  [
+   (+ (* a00 b00) (* a01 b10) (* a02 b20) (* a03 b30))
+   (+ (* a10 b00) (* a11 b10) (* a12 b20) (* a13 b30))
+   (+ (* a20 b00) (* a21 b10) (* a22 b20) (* a23 b30))
+   (+ (* a30 b00) (* a31 b10) (* a32 b20) (* a33 b30))
+ 
+   (+ (* a00 b01) (* a01 b11) (* a02 b21) (* a03 b31))
+   (+ (* a10 b01) (* a11 b11) (* a12 b21) (* a13 b31))
+   (+ (* a20 b01) (* a21 b11) (* a22 b21) (* a23 b31))
+   (+ (* a30 b01) (* a31 b11) (* a32 b21) (* a33 b31))
+
+   (+ (* a00 b02) (* a01 b12) (* a02 b22) (* a03 b32))
+   (+ (* a10 b02) (* a11 b12) (* a12 b22) (* a13 b32))
+   (+ (* a20 b02) (* a21 b12) (* a22 b22) (* a23 b32))
+   (+ (* a30 b02) (* a31 b12) (* a32 b22) (* a33 b32))
+
+   (+ (* a00 b03) (* a01 b13) (* a02 b23) (* a03 b33))
+   (+ (* a10 b03) (* a11 b13) (* a12 b23) (* a13 b33))
+   (+ (* a20 b03) (* a21 b13) (* a22 b23) (* a23 b33))
+   (+ (* a30 b03) (* a31 b13) (* a32 b23) (* a33 b33))])
 
 (defn mint [M] (apply int M))
               
 (defn m2det "2x2 matrix determinant" [A]
   (- (* (m2 A 0 0) (m2 A 1 1)) (* (m2 A 0 1) (m2 A 1 0))))
 
-;; FIXME
-(defn m3det "3x3 matrix determinant" [M]
+(defn m3det "3x3 matrix determinant" [[^double m00 ^double m10 ^double m20
+                                       ^double m01 ^double m11 ^double m21
+                                       ^double m02 ^double m12 ^double m22 :as M]]
   (v3dot (m3row M 0)
-         (vec3 (- (* (m3 M 1 1) (m3 M 2 2)) (* (m3 M 1 2) (m3 M 2 1)))
-               (- (* (m3 M 1 2) (m3 M 2 0)) (* (m3 M 2 2) (m3 M 1 0)))
-               (- (* (m3 M 1 0) (m3 M 2 1)) (* (m3 M 1 1) (m3 M 2 0))))))
+         (vec3 (- (* m11 m22) (* m12 m21))
+               (- (* m12 m20) (* m22 m10))
+               (- (* m10 m21) (* m11 m20)))))
 
 ;; TODO - Generalised determinant for sizes > 3
 
+;; No real gain using typed deconstructor
 (defn m2inverse [A]
   (m2muls (matrix2 (A 3) (- (A 2)) (- (A 1)) (A 0)) (/ (double (m2det A)))))
 
-(defn m3inverse [M]
+(defn m3inverse [[^double m00 ^double m10 ^double m20
+                  ^double m01 ^double m11 ^double m21
+                  ^double m02 ^double m12 ^double m22 :as M]]
   "3x3 matrix inverse"
-  (let [A (- (* (M 4) (M 8)) (* (M 7) (M 5))) 
-        B (- (* (M 7) (M 2)) (* (M 1) (M 8)))
-        C (- (* (M 1) (M 5)) (* (M 4) (M 2))) 
-        D (- (* (M 6) (M 5)) (* (M 3) (M 8))) 
-        E (- (* (M 0) (M 8)) (* (M 6) (M 2))) 
-        F (- (* (M 2) (M 3)) (* (M 0) (M 5))) 
-        G (- (* (M 3) (M 7)) (* (M 6) (M 4)))
-        H (- (* (M 6) (M 1)) (* (M 0) (M 7)))
-        K (- (* (M 0) (M 4)) (* (M 3) (M 1)))]
+  (let [A (- (* m11 m22) (* m12 m21)) 
+        B (- (* m12 m20) (* m10 m22))
+        C (- (* m10 m21) (* m11 m20)) 
+        D (- (* m02 m21) (* m01 m22)) 
+        E (- (* m00 m22) (* m02 m20)) 
+        F (- (* m20 m01) (* m00 m21)) 
+        G (- (* m01 m12) (* m02 m11))
+        H (- (* m02 m10) (* m00 m12))
+        K (- (* m00 m11) (* m01 m10))]
     (m3muls (matrix3 A D G
                      B E H
                      C F K) 
             (/ (double (m3det M))))))
 
-(defn m4inverse [M]
-  (let [t0 (* (M 10) (M 15)) t1 (* (M 14) (M 11))
-        t2   (* (M 6) (M 15)) t3  (* (M 14) (M 7))
-        t4   (* (M 6) (M 11)) t5 (* (M 10) (M 7))
-        t6   (* (M 2) (M 15)) t7 (* (M 14) (M 3))
-        t8   (* (M 2) (M 11)) t9 (* (M 10) (M 3))
-        t10   (* (M 2) (M 7)) t11  (* (M 6) (M 3))
-        t12   (* (M 8) (M 13)) t13  (* (M 12) (M 9))
-        t14   (* (M 4) (M 13)) t15 (* (M 12) (M 5))
-        t16   (* (M 4) (M 9))  t17 (* (M 8) (M 5))
-        t18   (* (M 0) (M 13)) t19 (* (M 12) (M 1))
-        t20   (* (M 0) (M 9))  t21 (* (M 8) (M 1))
-        t22   (* (M 0) (M 5))  t23 (* (M 4) (M 1))
+;; Pre-optimisation ([M] arg, indexed lookups): 18101.4 msecs
 
-        B [ 
-            (- (+ (* t0 (M 5)) (* t3 (M 9)) (* t4 (M 13)))
-               (+ (* t1 (M 5)) (* t2 (M 9)) (* t5 (M 13))))         
-            (- (+ (* t1 (M 4)) (* t2 (M 8)) (* t5 (M 12)))
-               (+ (* t0 (M 4)) (* t3 (M 8)) (* t4 (M 12))))
-            (- (+ (* t12 (M 7)) (* t15 (M 11)) (* t16 (M 15)))
-               (+ (* t13 (M 7)) (* t14 (M 11)) (* t17 (M 15))))
-            (- (+ (* t14 (M 10)) (* t17 (M 14)) (* t13 (M 6)))
-               (+ (* t16 (M 14)) (* t12 (M 6)) (* t15 (M 10))))
+(defn m4inverse [[ ^double m00 ^double m10 ^double m20 ^double m30
+                   ^double m01 ^double m11 ^double m21 ^double m31
+                   ^double m02 ^double m12 ^double m22 ^double m32
+                   ^double m03 ^double m13 ^double m23 ^double m33 :as M]]
+  (let [t0 (* m22 m33) t1 (* m23 m32) t2   (* m21 m33) t3  (* m23 m31)
+        t4   (* m21 m32) t5 (* m22 m31) t6   (* m20 m33) t7 (* m23 m30)
+        t8   (* m20 m32) t9 (* m22 m30) t10   (* m20 m31) t11  (* m21 m30)
+        t12   (* m02 m13) t13  (* m03 m12) t14   (* m01 m13) t15 (* m03 m11)
+        t16   (* m01 m12)  t17 (* m02 m11) t18   (* m00 m13) t19 (* m03 m10)
+        t20   (* m00 m12)  t21 (* m02 m10) t22   (* m00 m11)  t23 (* m01 m10)
 
-            (- (+ (* t1 (M 1)) (* t6 (M 9)) (* t9 (M 13)))
-               (+ (* t0 (M 1)) (* t7 (M 9)) (* t8 (M 13))))          
-            (- (+ (* t0 (M 0)) (* t7 (M 8)) (* t8 (M 12)))
-               (+ (* t1 (M 0)) (* t6 (M 8)) (* t9 (M 12))))          
-            (- (+ (* t13 (M 3)) (* t18 (M 11)) (* t21 (M 15)))
-               (+ (* t12 (M 3)) (* t19 (M 11)) (* t20 (M 15))))            
-            (- (+ (* t20 (M 14)) (* t12 (M 2)) (* t19 (M 10)))
-               (+ (* t18 (M 10)) (* t21 (M 14)) (* t13 (M 2))))
+        B [(- (+ (* t0 m11) (* t3 m12) (* t4 m13)) (+ (* t1 m11) (* t2 m12) (* t5 m13)))
+           (- (+ (* t1 m10) (* t6 m12) (* t9 m13)) (+ (* t0 m10) (* t7 m12) (* t8 m13)))
+           (- (+ (* t2 m10) (* t7 m11) (* t10 m13)) (+ (* t3 m10) (* t6 m11) (* t11 m13))) 
+           (- (+ (* t5 m10) (* t8 m11) (* t11 m12)) (+ (* t4 m10) (* t9 m11) (* t10 m12))) 
+           (- (+ (* t1 m01) (* t2 m02) (* t5 m03)) (+ (* t0 m01) (* t3 m02) (* t4 m03))) 
+           (- (+ (* t0 m00) (* t7 m02) (* t8 m03)) (+ (* t1 m00) (* t6 m02) (* t9 m03))) 
+           (- (+ (* t3 m00) (* t6 m01) (* t11 m03)) (+ (* t2 m00) (* t7 m01) (* t10 m03))) 
+           (- (+ (* t4 m00) (* t9 m01) (* t10 m02)) (+ (* t5 m00) (* t8 m01) (* t11 m02))) 
+           (- (+ (* t12 m31) (* t15 m32) (* t16 m33)) (+ (* t13 m31) (* t14 m32) (* t17 m33))) 
+           (- (+ (* t13 m30) (* t18 m32) (* t21 m33)) (+ (* t12 m30) (* t19 m32) (* t20 m33))) 
+           (- (+ (* t14 m30) (* t19 m31) (* t22 m33)) (+ (* t15 m30) (* t18 m31) (* t23 m33))) 
+           (- (+ (* t17 m30) (* t20 m31) (* t23 m32)) (+ (* t16 m30) (* t21 m31) (* t22 m32))) 
+           (- (+ (* t14 m22) (* t17 m23) (* t13 m21)) (+ (* t16 m23) (* t12 m21) (* t15 m22)))
+           (- (+ (* t20 m23) (* t12 m20) (* t19 m22)) (+ (* t18 m22) (* t21 m23) (* t13 m20))) 
+           (- (+ (* t18 m21) (* t23 m23) (* t15 m20)) (+ (* t22 m23) (* t14 m20) (* t19 m21))) 
+           (- (+ (* t22 m22) (* t16 m20) (* t21 m21)) (+ (* t20 m21) (* t23 m22) (* t17 m20)))]]
+    (m4muls B (/ (double (v4dot (vec4 m00 m01 m02 m03) (m4col B 0)))))))
 
-            (- (+ (* t2 (M 1)) (* t7 (M 5)) (* t10 (M 13)))
-               (+ (* t3 (M 1)) (* t6 (M 5)) (* t11 (M 13))))          
-            (- (+ (* t3 (M 0)) (* t6 (M 4)) (* t11 (M 12)))
-               (+ (* t2 (M 0)) (* t7 (M 4)) (* t10 (M 12))))          
-            (- (+ (* t14 (M 3)) (* t19 (M 7)) (* t22 (M 15)))
-               (+ (* t15 (M 3)) (* t18 (M 7)) (* t23 (M 15))))
-            (- (+ (* t18 (M 6)) (* t23 (M 14)) (* t15 (M 2)))
-               (+ (* t22 (M 14)) (* t14 (M 2)) (* t19 (M 6))))
-
-            (- (+ (* t5 (M 1)) (* t8 (M 5)) (* t11 (M 9)))
-               (+ (* t4 (M 1)) (* t9 (M 5)) (* t10 (M 9))))
-            (- (+ (* t4 (M 0)) (* t9 (M 4)) (* t10 (M 8)))
-               (+ (* t5 (M 0)) (* t8 (M 4)) (* t11(M 8))))
-            (- (+ (* t17 (M 3)) (* t20 (M 7)) (* t23 (M 11)))
-               (+ (* t16 (M 3)) (* t21 (M 7)) (* t22 (M 11))))
-            (- (+ (* t22 (M 10)) (* t16 (M 2)) (* t21 (M 6)))
-               (+ (* t20 (M 6)) (* t23 (M 10)) (* t17 (M 2))))]]
-    (m4muls B (/ (double (v4dot(m4row M 0) (m4col B 0)))))))
