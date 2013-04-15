@@ -1,4 +1,4 @@
-(defproject slimath "0.1.5"
+(defproject slimath "0.2.0"
   :description "Simple math library"
   :url "http://sliplanesoftware.com"
   :license {:name "Eclipse Public License"
