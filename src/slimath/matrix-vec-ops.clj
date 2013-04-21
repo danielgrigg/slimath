@@ -40,5 +40,5 @@
 ;(defmacro make-matrix-mul-vec
 ;  [{:keys [start end] :or {start 2}}]
 ;  (cons `do (for [n (range start end)]
-;              (let [fname# (str-sym- "m" n "mulv")]
+;              (let [fname# (str-sym "m" n "mulv")]
 ;              `(defn ~fname# "mul vector by matrix" [~'A ~'v]                     

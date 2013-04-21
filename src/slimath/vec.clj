@@ -2,17 +2,17 @@
 
 ;; TODO - would be nice if this worked
 (defmacro -varg [a n]
-  `(~@(for [x (range n)] (str-sym- a x)) :as ~a))  ; (str-sym- ~a ~x)) :as a))
+  `(~@(for [x (range n)] (str-sym a x)) :as ~a))  ; (str-sym ~a ~x)) :as a))
                 
 (defmacro -make-vec-ops
  [{:keys [name op start end] :or {start 2}}]
  (cons `do (for [n (range start end)]
-             `(defn ~(str-sym- \v n name)
+             `(defn ~(str-sym \v n name)
                 ~name
-                 [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]
-                  [~@(for [x (range n)] (str-sym- "b" x)) :as ~'b]]
+                 [[~@(for [x (range n)] (str-sym "a" x)) :as ~'a]
+                  [~@(for [x (range n)] (str-sym "b" x)) :as ~'b]]
                 [~@(for [x (range n)] 
-                     `(~op ~(str-sym- "a" x) ~(str-sym- "b" x)))]))))
+                     `(~op ~(str-sym "a" x) ~(str-sym "b" x)))]))))
 
 ;; TODO - ideally the general ops would be as fast as this.  But that requires
 ;; type hinting.  Which seems to be a pita to get working on the above.
@@ -21,18 +21,18 @@
 
 (defmacro -make-vec-unary-ops [{:keys [name op start end] :or {start 2}}]
   (cons `do (for [n (range start end)]
-              `(defn ~(str-sym- \v n name)
+              `(defn ~(str-sym \v n name)
                  ~name
-                [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]]
-                [~@(for [x (range n)] `(~op ~(str-sym- "a" x)))]))))
+                [[~@(for [x (range n)] (str-sym "a" x)) :as ~'a]]
+                [~@(for [x (range n)] `(~op ~(str-sym "a" x)))]))))
 
 (defmacro -make-vec-scalar-ops  
 [{:keys [name op start end] :or {start 2}}]
   (cons `do (for [n (range start end)]
-              `(defn ~(str-sym- \v n name "s")
+              `(defn ~(str-sym \v n name "s")
                  ~name
-                 [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a] ~'k]
-                 [ ~@(for [x (range n)] `(~op ~(str-sym- "a" x) ~'k))]))))
+                 [[~@(for [x (range n)] (str-sym "a" x)) :as ~'a] ~'k]
+                 [ ~@(for [x (range n)] `(~op ~(str-sym "a" x) ~'k))]))))
 
 (defmacro -vec-reduce [rop mop n & args]
   `(~rop ~@(for [x (range n)] `(~mop ~@(for [y args] `(~y ~x))))))
@@ -40,7 +40,7 @@
 (defmacro -make-vec-reduce-ops 
 [{:keys [prefix name rop mop start end] :or {prefix \v start 2}}]
   (cons `do (for [n (range start end)]
-              `(defn ~(str-sym- prefix n name)
+              `(defn ~(str-sym prefix n name)
                  ~(str  "map by " mop " and reduce by " rop)
                  [~'a ~'b]
                  (-vec-reduce ~rop ~mop ~n ~'a ~'b)))))
@@ -49,17 +49,17 @@
   [{:keys [start end] :or {start 2}}]
   (cons `do
         (for [n (range start end)]
-          (let [dot# (str-sym- "v" n "dot")
-                fname# (str-sym- "v" n "length")]
+          (let [dot# (str-sym "v" n "dot")
+                fname# (str-sym "v" n "length")]
             `(defn ~fname# "vector length" 
-               [[~@(for [x (range n)] (str-sym- "a" x)) :as ~'a]]
+               [[~@(for [x (range n)] (str-sym "a" x)) :as ~'a]]
                (numeric/sqrt (~dot# ~'a ~'a)))))))
 
 (defmacro -make-vec-generator 
   [{:keys [name start end f is-fn] :or {start 2}}]
   (cons `do
         (for [n (range start end)]
-          `(defn ~(str-sym- \v n name)
+          `(defn ~(str-sym \v n name)
              ~(str "Generate entries with " name)
              []
              [ ~@(for [c (range n)] (if is-fn `(~f) f))]))))
@@ -68,9 +68,9 @@
   [{:keys [name start end] :or {start 2}}]
   (cons `do
         (for [n (range start end)]
-          (let [muls# (str-sym- \v n "muls")
-                length# (str-sym- \v n "length")]
-            `(defn ~(str-sym- \v n "normalize")
+          (let [muls# (str-sym \v n "muls")
+                length# (str-sym \v n "length")]
+            `(defn ~(str-sym \v n "normalize")
                "normalize"
                [~'a]
                (~muls# ~'a (/ (max eps (~length# ~'a)))))))))
