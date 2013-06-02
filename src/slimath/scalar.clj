@@ -20,3 +20,8 @@
         (if (> t0 t1)
           [t1 t0]
           [t0 t1])))))
+
+(defn clamp "Clamp a to (min-a, max-x)" 
+  [^double a ^double min-a ^double max-a]
+  (min max-a (max min-a a)))
+
