@@ -1,4 +1,6 @@
-(in-ns 'slimath.core)
+(ns slimath.quat
+  (:use [slimath core vec]))
+
 (def ^:const slerp-tolerance 0.999)
 
 (defn quat 

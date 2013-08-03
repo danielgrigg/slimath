@@ -1,5 +1,4 @@
-(ns slimath.core-test
+(ns slimath.quat-test
   (:use midje.sweet
-        slimath.core)
+        [slimath vec])
   (:require [clojure.string :as str]))
-
