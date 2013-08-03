@@ -1,7 +1,8 @@
 (ns slimath.core-test
-  (:use clojure.test
-        slimath.core))
+  (:use midje.sweet
+        slimath.core)
+  (:require [clojure.string :as str]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(fact "`qmul` multiplies two quaternions"
+  (qmul (quat 3 -1 4 5) (quat  -2 4 3 2))
+      => (quat -23 1 33 8))
