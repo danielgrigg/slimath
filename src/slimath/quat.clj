@@ -30,7 +30,7 @@
 (defn quat-rotation-vectors [[^double ax ^double ay ^double az :as a]
                              [^double bx ^double by ^doube bz :as b]]
   (let [x (Math/sqrt (* 2.0 (+ 1.0 (v3dot a b))))
-        [cx cy cz] (v3muls (cross a b) x)]
+        [cx cy cz] (v3divs (cross a b) x)]
     (quat cx cy cz (* 0.5 x))))
 
 (defn quat-rotation-axis [^double rads [^double x ^double y ^double z :as xyz]]
@@ -46,10 +46,14 @@
 
 (defn quat-rotate-vector "rotate v by unit-q" [[qx qy qz qw] [vx vy vz]]
   (let [x (+ (* qw vx) (* qy vz) (- (* qz vy)))
-        y (+ (* qw vy) (* qz vx) (- (* qx qz)))
+        y (+ (* qw vy) (* qz vx) (- (* qx vz)))
         z (+ (* qw vz) (* qx vy) (- (* qy vx)))
         w (+ (* qx vx) (* qy vy) (* qz vz))]
+;    [x y z w]))
     (vec3 
      (+ (* w qx) (* x qw) (- (* y qz)) (* z qy))
-     (+ (* w qy) (* y qw) (- (* z qz)) (* x qz))
+     (+ (* w qy) (* y qw) (- (* z qx)) (* x qz))
      (+ (* w qz) (* z qw) (- (* x qy)) (* y qx)))))
+
+(defn quat-conj "conjugate of quaternion" [[qx qy qz qw]]
+  (quat (- qx) (- qy) (- qz) qw))
