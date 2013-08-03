@@ -1,5 +1,15 @@
 (in-ns 'slimath.core)
 
+(defn vsym [k n] (str-sym \v n (name k)))
+
+(defmacro vdefn [fname n args & body]
+  (let [xs (filter keyword? (flatten body))
+        ops (zipmap o (map #(vsym % n) o))]
+
+      `(defn ~(vsym fname n)
+         ~args
+         ~@(prewalk-replace ops body))))
+
 ;; TODO - would be nice if this worked
 (defmacro -varg [a n]
   `(~@(for [x (range n)] (str-sym a x)) :as ~a))  ; (str-sym ~a ~x)) :as a))
@@ -74,6 +84,9 @@
                "normalize"
                [~'a]
                (~muls# ~'a (/ (max eps (~length# ~'a)))))))))
+
+(doseq [i [2]]  
+  (vdefn lerp i [t a b] (:add a (:muls (:sub b a) t))))
    
 (defmacro vec2 [a b] `[ ~a ~b])
 (defmacro vec3 [a b c] `[ ~a ~b ~c])
@@ -98,6 +111,7 @@
 (-make-vec-unary-ops { :name "floor" :op numeric/floor :end 5})
 (-make-vec-unary-ops { :name "ceil" :op numeric/ceil :end 5})
 (-make-vec-unary-ops { :name "abs" :op numeric/abs :end 5})
+(-make-vec-unary-ops { :name "negate" :op - :end 5})
 (-make-vec-length {:end 5})
 (-make-vec-normalize {:end 5})
 
