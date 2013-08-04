@@ -7,4 +7,3 @@
                  [org.clojure/math.numeric-tower "0.0.2"]]
   :dev-dependencies [[midje "1.5.1" :exclusions [org.clojure/clojure]]
                      [lein-midje "3.1.0"]])
-  :profiles {:dev {:dependencies [[midje "1.5.0"]]}})
