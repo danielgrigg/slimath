@@ -2,8 +2,9 @@
 
 A simple Clojure math library.  Mostly linear algebra.
 
-## Usage
+[![Build Status](https://travis-ci.org/danielgrigg/slimath.png?branch=master)](https://travis-ci.org/danielgrigg/slimath)
 
+## Usage
 
 ## License
 
