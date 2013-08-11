@@ -31,6 +31,9 @@
   ([^double x ^double y ^double tolerance]
    (< (numeric/abs (- x y)) tolerance)))
 
+(defn struct-approx? "TODO: This is terrible, but works for now" 
+  [a b]
+  (every? true? (map approx? (flatten a) (flatten b))))
 
 (defn quadratic "Compute the quadratic equation" [^double A ^double B ^double C]
   (let [discrim (- (* B B) (* 4.0 A C))]
