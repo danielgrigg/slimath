@@ -128,3 +128,15 @@
   (vec3 (- (* (a 1) (b 2)) (* (a 2) (b 1)))
         (- (* (a 2) (b 0)) (* (a 0) (b 2)))
         (- (* (a 0) (b 1)) (* (a 1) (b 0)))))
+
+;;TODO - vectorize
+(defn v3clamp
+  [[^double x ^double y ^double z]]
+     [(if (> (Math/abs x) eps-small) x eps-small)
+      (if (> (Math/abs y) eps-small) y eps-small)
+      (if (> (Math/abs z) eps-small) z eps-small)])
+ 
+(defn v3sign [[^double x ^double y ^double z]] 
+  [(if (pos? x) 1 -1)
+   (if (pos? y) 1 -1)
+   (if (pos? z) 1 -1)])
