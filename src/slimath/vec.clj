@@ -116,6 +116,7 @@
 (-make-vec-reduce-ops { :name "approx?" :rop and :mop approx? })
 (-make-vec-unary-ops { :name "floor" :op floor })
 (-make-vec-unary-ops { :name "ceil" :op ceil})
+(-make-vec-unary-ops { :name "int" :op int })
 (-make-vec-unary-ops { :name "abs" :op abs})
 (-make-vec-unary-ops { :name "negate" :op - })
 
