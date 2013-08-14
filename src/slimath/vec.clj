@@ -131,10 +131,12 @@
 
 ;;TODO - vectorize
 (defn v3clamp
-  [[^double x ^double y ^double z]]
-     [(if (> (Math/abs x) eps-small) x eps-small)
-      (if (> (Math/abs y) eps-small) y eps-small)
-      (if (> (Math/abs z) eps-small) z eps-small)])
+  [[^double x ^double y ^double z :as xyz] 
+   [^double ax ^double ay ^double az :as a]
+   [^double bx ^double by ^double bz :as b]]
+  (-> xyz
+      (v3min b)
+      (v3max a)))
  
 (defn v3sign [[^double x ^double y ^double z]] 
   [(if (pos? x) 1 -1)
